@@ -9,12 +9,16 @@ from effects import *
 class Gui:
     def __init__(self):
         pygame.init()
+        pygame.font.init()
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption(TITLE)
         self.clock = pygame.time.Clock()
 
     def new(self):
-        self.game = Game([Rocket((400,400))], 0.2, 25)
+        font = '.\Fonts\-Nasalization-Regular.ttf'
+        self.font_medium = pygame.font.Font(font, 35)
+
+        self.game = Game(Rocket((400,400)), 0.2, 15)
         self.particles = ParticleManager(["#FFFACC","#FFEACC","#FFD7CC","#FFCDCC","#FFD5AD"])
 
 
@@ -34,9 +38,8 @@ class Gui:
 
         pygame.display.set_caption(f"{TITLE} | FPS {round(self.clock.get_fps(),2)}")
         
-        self.game.update_rockets()
-        self.game.update_astroids()
-        self.game.update_bullets()
+        self.game.update()
+    
         effects = self.game.update_collisions()
 
         for p in effects['particles']:
@@ -51,7 +54,7 @@ class Gui:
         self.screen.fill(COLORS['background'])
 
         
-        r = self.game.rockets[0]
+        r = self.game.rocket
         
         # Adds new particles if accerating
         if r.acceleration != 0: 
@@ -73,6 +76,10 @@ class Gui:
         for b in r.bullets:
             b.draw(self.screen)
 
+        # Draw texts
+        text = self.font_medium.render(f"Score: {r.score}", True, COLORS['white'])
+        self.screen.blit(text, (20,10))
+
         pygame.display.flip()
 
     def events(self):
@@ -82,21 +89,17 @@ class Gui:
             if event.type == pygame.QUIT:
                 self.close()
         
-        r = self.game.rockets[0]
+        r = self.game.rocket
         if keys_pressed[pygame.K_RIGHT]:
-            r.direction += math.pi/Rocket.ROTATION_RATE
+            self.game.controller(Game.TURN_RIGHT)
         if keys_pressed[pygame.K_LEFT]:
-            r.direction -= math.pi/Rocket.ROTATION_RATE
+            self.game.controller(Game.TURN_LEFT)
         if keys_pressed[pygame.K_UP]:
-            r.acceleration = Rocket.ACCELERATION
+            self.game.controller(Game.THRUST)
         else:
             r.acceleration = 0
         if keys_pressed[pygame.K_SPACE]:
-            if r.shoot_countdown < 0 and len(r.bullets) < Rocket.MAX_BULLETS:
-                r.shoot_countdown = Rocket.SHOOTER_DELAY
-                r.bullets.append(
-                    Bullet([r.pos.x, r.pos.y], r.direction)
-                )
+            self.game.controller(Game.SHOOT)
 
 
 # create the game object
