@@ -6,33 +6,74 @@ from settings import *
 
 class Game():
 
-    def __init__(self, rockets : list, total_asteroids : int ):
+    def __init__(self, rockets : list, asteroid_timer : int, max_asteroids : int):
         
         self.rockets = rockets
-        self.total_asteroids = total_asteroids
+        self.asteroid_spawn_timer = asteroid_timer * 60
+        self.asteroid_spawn_tick = 0
+        self.max_asteroids = max_asteroids
         self.asteroids = []
 
     def update_collisions(self):
+
+        effects = {'particles':[]}
+
+        # rocket collisions
         for rocket in self.rockets:
             for asteroid in self.asteroids:
                 if math.hypot(rocket.pos.x-asteroid.pos.x, rocket.pos.y-asteroid.pos.y) < asteroid.size + Rocket.RADIUS*0.8:
                     rocket.alive = False
                     self.asteroids.remove(asteroid)
                     continue
+            
+        for rocket in self.rockets:
+            # bullet collisions
+            for bullet in rocket.bullets:
+                for asteroid in self.asteroids:
+                    if math.hypot(bullet.pos.x-asteroid.pos.x, bullet.pos.y-asteroid.pos.y) < asteroid.size + bullet.SIZE:
+                        
+                        # This should kill the bullet
+                        bullet.timer = 999
+
+                        # Split the asteroid
+                        if asteroid.size > 2*Asteroid.SIZE_RANGE[0]:
+                            a = Asteroid([asteroid.pos.x, asteroid.pos.y], asteroid.size//2, len(asteroid.polygon)-1, int(asteroid.speed*0.9))
+                            b = Asteroid([asteroid.pos.x, asteroid.pos.y], asteroid.size//2, len(asteroid.polygon)-1, int(asteroid.speed*0.9))
+
+                            # Want the direction to be somewhat perpendicular to the bullet's
+                            direction = bullet.direction + math.pi/2
+                            a.direction = direction
+                            b.direction = -direction
+
+                            self.asteroids.append(a)
+                            self.asteroids.append(b)
+
+                            effects['particles'].append([asteroid.pos.x, asteroid.pos.y])
+
+                        # This should kill the asteroid
+                        self.asteroids.remove(asteroid)
+
+                        continue
+        
+        # Returns drawing sequences such as particles
+        return effects
 
     def update_astroids(self):
 
+        self.asteroid_spawn_tick += 1
+
         # Spawn new asteroids
         SPAWN_RAD = WIDTH//2
-        while len(self.asteroids) < self.total_asteroids:
+        if self.asteroid_spawn_tick > self.asteroid_spawn_timer and len(self.asteroids) < self.max_asteroids:
             spawn_angle = random.random()*2 * math.pi*2
             self.asteroids.append(
                 # make it so that they spawn properly in a circlurar area and have a target that a is apoint on a smaller circle somewhere      
                 Asteroid(
-                    (SPAWN_RAD*math.cos(spawn_angle)+WIDTH//2,SPAWN_RAD*math.sin(spawn_angle)+WIDTH//2), random.randint(5,60), random.randint(6,11),
+                    (SPAWN_RAD*math.cos(spawn_angle)+WIDTH//2,SPAWN_RAD*math.sin(spawn_angle)+WIDTH//2), random.randint(*Asteroid.SIZE_RANGE), random.randint(6,11),
                     random.random()*2 +1
                 )
             )
+            self.asteroid_spawn_tick = 0
         
         for asteroid in self.asteroids:
             asteroid.pos.x += asteroid.speed * math.cos(asteroid.direction)
@@ -66,7 +107,33 @@ class Game():
             if rocket.velocity.magnitude() > Rocket.MAX_SPEED:
                 rocket.velocity.scale_to_length(Rocket.MAX_SPEED)
 
+            rocket.shoot_countdown -= 1
+
+    def update_bullets(self):
+        for rocket in self.rockets:
+            for bullet in rocket.bullets:
+
+                bullet.timer += 1
+                if bullet.timer > Bullet.LIFESPAN*60:
+                    rocket.bullets.remove(bullet)
+                    continue
+
+                bullet.pos.x += bullet.speed * math.cos(bullet.direction)
+                bullet.pos.y += bullet.speed * math.sin(bullet.direction)
+
+                # Teleport across if out of bounds
+                if bullet.pos.x >= WIDTH:
+                    bullet.pos.x = 0
+                if bullet.pos.x < 0:
+                    bullet.pos.x = WIDTH
+                if bullet.pos.y >= HEIGHT:
+                    bullet.pos.y = 0 
+                if bullet.pos.y < 0:
+                    bullet.pos.y = HEIGHT
+
 class Asteroid():
+
+    SIZE_RANGE = (15,65)
 
     def __init__(self, pos, size, sides, speed, point_error=0.3):
 
@@ -118,6 +185,9 @@ class Rocket():
     ANGLE_B = 2.5
     ROTATION_RATE = 50
 
+    SHOOTER_DELAY = 10
+    MAX_BULLETS = 8
+
     def __init__(self, pos : tuple):
 
         self.pos = Vector(*pos)
@@ -126,6 +196,9 @@ class Rocket():
         self.direction = math.pi
 
         self.alive = True
+
+        self.bullets = []
+        self.shoot_countdown = Rocket.SHOOTER_DELAY
     
     def calculate_polygon(self):
 
@@ -156,8 +229,9 @@ class Rocket():
 
 class Bullet():
 
-    SPEED = 5
+    SPEED = 12
     SIZE = 3
+    LIFESPAN = 2 # in seconds
 
     def __init__(self, pos, direction):
 
@@ -165,7 +239,9 @@ class Bullet():
         self.speed = Bullet.SPEED
         self.direction = direction
 
-        self.size = size
+        self.size = Bullet.SIZE
+        self.timer = 0
 
     def draw(self, screen):
-        pass
+        
+        pygame.gfxdraw.aacircle(screen, int(self.pos.x), int(self.pos.y), self.size, COLORS['white'])
