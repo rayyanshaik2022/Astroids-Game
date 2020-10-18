@@ -4,7 +4,9 @@ from game import *
 from settings import *
 import random
 from effects import *
+from network import *
 
+agent = Genetic()
 
 class Gui:
     def __init__(self):
@@ -88,6 +90,9 @@ class Gui:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.close()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_q:
+                    print(agent.get_state(self.game.rocket, self.game.rocket.closest_obstacles(self.game.asteroids)))
         
         r = self.game.rocket
         if keys_pressed[pygame.K_RIGHT]:

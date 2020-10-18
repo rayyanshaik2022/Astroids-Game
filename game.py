@@ -271,6 +271,10 @@ class Rocket():
 
         return translated_points
     
+    def closest_obstacles(self, obstacles):
+
+        return sorted(obstacles, key=lambda x: math.hypot(self.pos.x-x.pos.x, self.pos.y-x.pos.y))
+
     def draw(self, screen):
         pygame.draw.polygon(screen, COLORS['background'], self.calculate_polygon())
         pygame.gfxdraw.aapolygon(screen, self.calculate_polygon(), COLORS['white'])
