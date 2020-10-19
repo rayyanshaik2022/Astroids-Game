@@ -58,6 +58,7 @@ class Game():
                 
                 if not rocket.dead:
                     rocket.dead = self.tick
+                rocket.lives_used += 1
 
                 self.asteroids.remove(asteroid)
                 continue
@@ -128,7 +129,7 @@ class Game():
             asteroid.pos.x += asteroid.speed * math.cos(asteroid.direction)
             asteroid.pos.y += asteroid.speed * math.sin(asteroid.direction)
 
-            if asteroid.pos.x < 0-asteroid.size or asteroid.pos.y-asteroid.size < 0 or \
+            if asteroid.pos.x < 0-asteroid.size or asteroid.pos.y+asteroid.size < 0 or \
                 asteroid.pos.x >= WIDTH+asteroid.size or asteroid.pos.y >= HEIGHT+asteroid.size:
 
                 self.asteroids.remove(asteroid)
@@ -245,6 +246,7 @@ class Rocket():
         self.direction = math.pi
 
         self.dead = False
+        self.lives_used = 0
         self.score = 0
 
         self.bullets = []

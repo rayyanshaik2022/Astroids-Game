@@ -6,7 +6,7 @@ import random
 from effects import *
 from network import *
 
-agent = Genetic()
+agent = BEST
 
 class Gui:
     def __init__(self):
@@ -39,7 +39,11 @@ class Gui:
     def update(self):
 
         pygame.display.set_caption(f"{TITLE} | FPS {round(self.clock.get_fps(),2)}")
-        
+
+        self.game.controller(
+            (agent.get_move(self.game.rocket, self.game.rocket.closest_obstacles(self.game.asteroids)))
+        )
+
         self.game.update()
     
         effects = self.game.update_collisions()
