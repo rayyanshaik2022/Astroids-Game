@@ -156,6 +156,8 @@ class Game():
         
         if rocket.velocity.magnitude() > Rocket.MAX_SPEED:
             rocket.velocity.scale_to_length(Rocket.MAX_SPEED)
+        
+        rocket.distance_covered += rocket.velocity.magnitude()
 
         rocket.shoot_countdown -= 1
 
@@ -251,6 +253,7 @@ class Rocket():
 
         self.bullets = []
         self.shoot_countdown = Rocket.SHOOTER_DELAY
+        self.distance_covered = 0
     
     def calculate_polygon(self):
 

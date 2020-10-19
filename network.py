@@ -15,7 +15,7 @@ class Genetic:
     def __init__(self):
 
         # creates a random network
-        self.network = self.generate_rnetwork(27, 15, 5)
+        self.network = self.generate_rnetwork(27, 20, 5)
     
     def generate_rnetwork(self, input_size, hidden_size, output_size):
 
@@ -25,14 +25,15 @@ class Genetic:
         # The +1 is for a bias weight
         hidden_layer1 = np.array([[random.uniform(-1,1) for _ in range(input_size + 1)] for _ in range(hidden_size)])
         hidden_layer2 = np.array([[random.uniform(-1,1) for _ in range(hidden_size + 1)] for _ in range(hidden_size)])
+        hidden_layer3 = np.array([[random.uniform(-1,1) for _ in range(hidden_size + 1)] for _ in range(hidden_size)])
         output_layer = np.array([[random.uniform(-1,1) for _ in range(hidden_size + 1)] for _ in range(output_size)])
 
-        return [hidden_layer1, hidden_layer2, output_layer]
+        return [hidden_layer1, hidden_layer2, hidden_layer3, output_layer]
 
     def get_move(self, rocket, asteroids):
         
         input_vector = self.get_state(rocket, asteroids)
-        hidden_layer1, hidden_layer2, output_layer = self.network
+        hidden_layer1, hidden_layer2, hidden_layer3, output_layer = self.network
 
         # Forwards propagation
         # Tanh is the activation function
@@ -48,9 +49,14 @@ class Genetic:
             math.tanh(np.dot(hidden_result1, hidden_layer2[i])) \
                 for i in range(hidden_layer2.shape[0])] + [1]) # [1] is added as a bias
         
-        # Use dot product to get the output of perceptrons from hiddenresult 2 to the output layer
+        # Use dot product to get the output of perceptrons from hiddenresult 1 to the hiddenlayer3
+        hidden_result3 = np.array([
+            math.tanh(np.dot(hidden_result2, hidden_layer3[i])) \
+                for i in range(hidden_layer3.shape[0])] + [1]) # [1] is added as a bias
+        
+        # Use dot product to get the output of perceptrons from hiddenresult 3 to the output layer
         output_result = np.array([
-            math.tanh(np.dot(hidden_result2, output_layer[i])) \
+            math.tanh(np.dot(hidden_result3, output_layer[i])) \
                 for i in range(output_layer.shape[0])])
 
         max_index = np.argmax(output_result)
@@ -63,21 +69,22 @@ class Genetic:
 
         """
         Inputs:
-        1. rocket.x/WIDTH
-        2. rocket.y/HEIGHT
-        3. rocket.acceleration / MAX ACCEL
-        4. rocket.speed / MAX SPEED
-        5. rocket.velocity (direction) / 2pi
-        6. shooter countdown / MAX VAL
-        7. rocket.direction / 2pi
+        1. Rocket x Position
+        2. Rocket y Position
+        3. Rocket Acceleration
+        4. Rocket Speed
+        5. Rocket Velocity (direction)
+        6. Rocket shooter countdown
+        7. Rocket Direction
 
-        inputs from 4 closest astroids
+        - Inputs from 4 closest astroids
 
-        8. astroid.x / WIDTH
-        9. astroid.y / HEIGHT
-        10. astroid.speed / MAX SPEED for astroid
-        11. asteroid.direction / 2pi
-        12. (distance from edge to player) hypot(asteroid.pos,rocket.pos) - asteroid.size / hypot(width, height)
+        8. Asteroid x Position
+        9. Asteroid y Position
+        10. Asteroid Speed
+        11. Asteroid Direction
+        12. Distance from Asteroid (edge of polygon) to Rocket
+        12. (distance from edge to player)
         
         repeat asteroid 4x
 
@@ -93,7 +100,7 @@ class Genetic:
         input_vector[1] = rocket.pos.y/HEIGHT
         input_vector[2] = rocket.acceleration/Rocket.ACCELERATION
         input_vector[3] = rocket.velocity.magnitude() / Rocket.MAX_SPEED
-        input_vector[4] = math.atan2(rocket.pos.x, rocket.pos.y) / (2*math.pi)
+        input_vector[4] = math.atan2(rocket.velocity.x, rocket.velocity.y) / (2*math.pi)
         input_vector[5] = rocket.shoot_countdown / Rocket.SHOOTER_DELAY
         input_vector[6] = (rocket.direction%(2*math.pi)) / math.pi
 
@@ -114,53 +121,129 @@ class Genetic:
 
 class Population:
 
-    def __init__(self, pop_size, generation, lifespan, network_type=Genetic):
+    def __init__(self, pop_size, generations, lifespan, mutation_chance=0.1, mutation_rate=0.1, network_type=Genetic):
 
         self.pop_size = pop_size
-        self.generation = [network_type() for i in range(pop_size)]
+        self.population = [network_type() for i in range(pop_size)]
+        self.generations = generations
+        self.current_generation = 1
         self.lifespan = lifespan * 60 # in seconds
 
-    def evaluate_fitness(self, score, lives_used, dead):
-        LIFE_VALUE = 250
+        self.mutation_chance = mutation_chance
+        self.mutation_rate = mutation_rate
+
+        self.network_type = network_type
+
+        self.best_by_generation = []
+
+    def evaluate_fitness(self, score, lives_used, dead, distance):
+
+        """
+        What do we want to score?
+        Lose fitness for dying
+        Gain fitness for shooting asteroids
+        Gain fitness for moving
+        """
+
+        LIFE_VALUE = 250 * 8
+        DISTANCE_WEIGHT = 0.75
 
         if dead == False:
             return score
         else:
             mult = dead/self.lifespan
 
-            return score*mult - LIFE_VALUE*lives_used
+            return score*mult - LIFE_VALUE*lives_used + distance*DISTANCE_WEIGHT
+    
+    def crossover(self, pool, total_children):
+        children = []
+
+        for i in range(total_children):
+            parentA = random.choice(pool)
+            parentB = random.choice(pool)
+
+            mid = random.randint(0, len(parentA.network[0]))
+            hidden_layer1 = np.array( list(parentA.network[0][:mid]) + list(parentB.network[0][mid:]) )
+
+            mid = random.randint(0, len(parentA.network[1]))
+            hidden_layer2 = np.array( list(parentA.network[1][:mid]) + list(parentB.network[1][mid:]) )
+
+            mid = random.randint(0, len(parentA.network[1]))
+            hidden_layer3 = np.array( list(parentA.network[2][:mid]) + list(parentB.network[2][mid:]) )
+            
+            child = self.network_type()
+
+            child.network[0] = hidden_layer1
+            child.network[1] = hidden_layer2
+            child.network[2] = hidden_layer3
+
+            children.append(child)
+
+        return children
+    
+    def mutate(self, pool):
+
+        chance = self.mutation_chance
+        rate = self.mutation_rate
+
+        # Mutation on all layers except last
+        for entity in pool:
+            for layer in entity.network[:1]:
+
+                for i in range(len(layer)):
+                    if random.random() < chance:
+                        layer[i] += np.random.uniform(-1,1) * rate
+
+        return pool
     
     def train_network(self, network):
 
         g = Game(Rocket((400,400)), 0.2, 15)
-        c = 0
+        
         while g.tick < self.lifespan:
             move = (network.get_move(g.rocket, g.rocket.closest_obstacles(g.asteroids)))
             g.controller(move)
             g.update()
             g.update_collisions()
 
-        return self.evaluate_fitness(g.rocket.score, g.rocket.lives_used, g.rocket.dead)
+        return self.evaluate_fitness(g.rocket.score, g.rocket.lives_used, g.rocket.dead, g.rocket.distance_covered)
     
     def train_generation(self):
         networks = []
-        for n in self.generation:
-            fitness = p.train_network(n)
+        for n in self.population:
+            fitness = self.train_network(n)
             networks.append((n, fitness))
         
         # sort from best to worst
-        sorted_generation = sorted(networks, key=lambda x: x[1]).reverse()
-        print("Best Score: ", sorted_generation[0][1])
-        self.generation = [y[0] for y in sorted_generation]
+        sorted_generation = sorted(networks, key=lambda x: x[1])[::-1]
+        top_score = sorted_generation[0][1]
+        print("Best Score: ", top_score)
+        self.population = [y[0] for y in sorted_generation]
 
         # Take top 25%
-        # from random choices of them, make next 25% mutations
-        # add 50% more randoms
-        # mutate all of them
+        top_25 = self.population[:len(self.population)//4]
+        top_25_children = self.crossover(top_25, len(self.population)//2)
+        randoms = [self.network_type() for i in  range(self.pop_size-len(top_25)-len(top_25_children))]
+
+
+        # Now mutate all of these 
+        a = self.mutate(top_25)
+        b = self.mutate(top_25_children)
+        c = self.mutate(randoms)
+        self.population = a+b+c
+
+        # Elitism: Also include the highest performing network, unmodified
+        self.population.insert(0,top_25[0])
+        self.population = self.population[:-1]
 
         # Done with 1 generation
-    
+        # Return score of the best performing network
 
-p = Population(50, 10, 20)
-p.train_generation()
-BEST = p.generation[0]
+        return top_score
+    
+    def train(self):
+        for i in range(self.generations):
+            print("Gen:",self.current_generation)
+            top_score = self.train_generation()
+            self.best_by_generation.append((self.population[0], top_score))
+            self.current_generation += 1

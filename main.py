@@ -6,7 +6,11 @@ import random
 from effects import *
 from network import *
 
-agent = BEST
+p = Population(pop_size=25, generations=15, lifespan=30, mutation_chance=0.15, mutation_rate=0.2)
+p.train()
+agent = p.population[0]
+
+key = input("Ready to start visualization? ")
 
 class Gui:
     def __init__(self):
