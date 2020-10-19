@@ -149,10 +149,16 @@ class Population:
             networks.append((n, fitness))
         
         # sort from best to worst
-        sorted_generation = sorted(networks, key=lambda x: x[1])[::-1]
+        sorted_generation = sorted(networks, key=lambda x: x[1]).reverse()
         print("Best Score: ", sorted_generation[0][1])
-        print("Worst Score: ", sorted_generation[-1][1])
         self.generation = [y[0] for y in sorted_generation]
+
+        # Take top 25%
+        # from random choices of them, make next 25% mutations
+        # add 50% more randoms
+        # mutate all of them
+
+        # Done with 1 generation
     
 
 p = Population(50, 10, 20)
