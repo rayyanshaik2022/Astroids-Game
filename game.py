@@ -3,6 +3,7 @@ import math
 import random
 import pygame
 from settings import *
+from shapely.geometry import Polygon, LineString
 
 class Game():
 
@@ -53,15 +54,22 @@ class Game():
 
         # rocket collisions
         rocket = self.rocket
-        for asteroid in self.asteroids:
-            if math.hypot(rocket.pos.x-asteroid.pos.x, rocket.pos.y-asteroid.pos.y) < asteroid.size + Rocket.RADIUS*0.8:
-                
+
+        rocket_poly = Polygon(rocket.calculate_polygon())
+        rocket_view_lines = [LineString([p1, p2]) for p1, p2 in rocket.calculate_vision()]
+        vision_intersections = [[] for i in range(Rocket.VISION_LINES)]
+
+        for asteroid in self.asteroids:      
+            asteroid_poly = Polygon(asteroid.current_polygon())
+
+            if rocket_poly.intersects(asteroid_poly):
                 if not rocket.dead:
                     rocket.dead = self.tick
                 rocket.lives_used += 1
 
                 self.asteroids.remove(asteroid)
                 continue
+
         # bullet collisions
         for bullet in rocket.bullets:
             for asteroid in self.asteroids:
@@ -106,6 +114,24 @@ class Game():
 
                     continue
         
+        
+        # Calculate intersections with lines and asteroids
+        for asteroid in self.asteroids:
+            asteroid_poly = Polygon(asteroid.current_polygon())
+        
+            for i, line in enumerate(rocket_view_lines):
+                    intersection = line.intersection(asteroid_poly)
+                    if intersection:
+                        vision_intersections[i].append(intersection.coords[0])
+        
+        # sort all intersections
+        #vision_intersections = sorted(vision_intersections, key= lambda: )
+        rocket.vision_intersections = [
+            sorted(x, key=lambda z: ) for x in vision_intersections
+        ]
+        rocket.vision_intersections = vision_intersections
+        
+
         # Returns drawing sequences such as particles
         return effects
 
@@ -244,6 +270,9 @@ class Rocket():
     # Should be ~8 for the actual game
     MAX_BULLETS = 3
 
+    VISION_DISTANCE = 200
+    VISION_LINES = 8
+
     def __init__(self, pos : tuple):
 
         self.pos = Vector(*pos)
@@ -254,6 +283,8 @@ class Rocket():
         self.dead = False
         self.lives_used = 0
         self.score = 0
+
+        self.vision_intersections = [[] for i in range(Rocket.VISION_LINES)]
 
         self.bullets = []
         self.shoot_countdown = Rocket.SHOOTER_DELAY
@@ -285,7 +316,39 @@ class Rocket():
 
         return sorted(obstacles, key=lambda x: math.hypot(self.pos.x-x.pos.x, self.pos.y-x.pos.y))
 
+    def calculate_vision(self):
+
+        center = self.pos
+        direction = self.direction
+
+        total_lines = Rocket.VISION_LINES
+        lines = []
+
+        for i in range(total_lines):
+            p1 = [center.x, center.y]
+            angle = direction + 2*math.pi * (i+1)/total_lines
+            p2 = [center.x + math.cos(angle)*Rocket.VISION_DISTANCE, center.y + math.sin(angle)*Rocket.VISION_DISTANCE]
+            lines.append([p1, p2])
+        
+        return lines
+        
     def draw(self, screen):
+        # Draw lines
+        for i, p in enumerate(self.calculate_vision()):
+            p1, p2 = p
+            if self.vision_intersections[i] == []:
+                x1, y1 = int(p1[0]), int(p1[1])
+                x2, y2 = int(p2[0]), int(p2[1])
+                pygame.gfxdraw.line(screen, x1, y1, x2, y2, COLORS['white'])
+
+        # Draw intersection lines
+        i_lines = self.vision_intersections
+        for line in i_lines:
+            for closest_intersection in  line:
+                x, y = closest_intersection
+                pygame.gfxdraw.line(screen, int(self.pos.x), int(self.pos.y), int(x), int(y), Color("#FF0000"))
+
+
         pygame.draw.polygon(screen, COLORS['background'], self.calculate_polygon())
         pygame.gfxdraw.aapolygon(screen, self.calculate_polygon(), COLORS['white'])
 

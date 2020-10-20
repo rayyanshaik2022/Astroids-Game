@@ -6,11 +6,13 @@ import random
 from effects import *
 from network import *
 
+'''
 p = Population(pop_size=50, generations=25, lifespan=200, mutation_chance=0.15, mutation_rate=0.2)
 p.train()
 agent = p.population[0]
 
 key = input("Ready to start visualization? ")
+'''
 
 class Gui:
     def __init__(self):
@@ -43,9 +45,11 @@ class Gui:
 
         pygame.display.set_caption(f"{TITLE} | FPS {round(self.clock.get_fps(),2)}")
 
+        '''
         self.game.controller(
             (agent.get_move(self.game.rocket, self.game.rocket.closest_obstacles(self.game.asteroids)))
         )
+        '''
 
         self.game.update()
     
