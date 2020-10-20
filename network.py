@@ -136,7 +136,7 @@ class Population:
 
         self.best_by_generation = []
 
-    def evaluate_fitness(self, score, lives_used, dead, distance):
+    def evaluate_fitness(self, rocket):
 
         """
         What do we want to score?
@@ -146,14 +146,14 @@ class Population:
         """
 
         LIFE_VALUE = 250 * 8
-        DISTANCE_WEIGHT = 0.75
+        DISTANCE_WEIGHT = 2
 
-        if dead == False:
-            return score
+        if rocket.dead == False:
+            return rocket.score
         else:
-            mult = dead/self.lifespan
+            mult = rocket.dead/self.lifespan
 
-            return score*mult - LIFE_VALUE*lives_used + distance*DISTANCE_WEIGHT
+            return rocket.score*mult - LIFE_VALUE*rocket.lives_used + rocket.distance_covered*DISTANCE_WEIGHT
     
     def crossover(self, pool, total_children):
         children = []
@@ -206,7 +206,7 @@ class Population:
             g.update()
             g.update_collisions()
 
-        return self.evaluate_fitness(g.rocket.score, g.rocket.lives_used, g.rocket.dead, g.rocket.distance_covered)
+        return self.evaluate_fitness(g.rocket)
     
     def train_generation(self):
         networks = []

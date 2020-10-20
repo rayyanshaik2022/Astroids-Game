@@ -6,7 +6,7 @@ import random
 from effects import *
 from network import *
 
-p = Population(pop_size=25, generations=15, lifespan=30, mutation_chance=0.15, mutation_rate=0.2)
+p = Population(pop_size=10, generations=5, lifespan=40, mutation_chance=0.15, mutation_rate=0.2)
 p.train()
 agent = p.population[0]
 
@@ -26,7 +26,6 @@ class Gui:
 
         self.game = Game(Rocket((400,400)), 0.2, 15)
         self.particles = ParticleManager(["#FFFACC","#FFEACC","#FFD7CC","#FFCDCC","#FFD5AD"])
-
 
     def run(self):
         self.playing = True
