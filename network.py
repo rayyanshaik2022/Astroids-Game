@@ -140,20 +140,16 @@ class Population:
 
         """
         What do we want to score?
-        Lose fitness for dying
-        Gain fitness for shooting asteroids
-        Gain fitness for moving
+        + points from shooting asteroids
+        + time alive
+        + distance covered over period alive (promotes movement or high velocity?)
         """
 
-        LIFE_VALUE = 250 * 8
-        DISTANCE_WEIGHT = 2
-
-        if rocket.dead == False:
-            return rocket.score
-        else:
-            mult = rocket.dead/self.lifespan
-
-            return rocket.score*mult - LIFE_VALUE*rocket.lives_used + rocket.distance_covered*DISTANCE_WEIGHT
+        score = rocket.score
+        time_alive = rocket.time_alive
+        distance = rocket.distance_covered/(time_alive*0.002)
+        
+        return rocket.score + time_alive + distance
     
     def crossover(self, pool, total_children):
         children = []
@@ -198,9 +194,10 @@ class Population:
     
     def train_network(self, network):
 
-        g = Game(Rocket((400,400)), 0.2, 15)
+        rocket_spawn = (random.randint(300,500), random.randint(300,500)) # (400,400) as center
+        g = Game(Rocket(rocket_spawn), 0.2, 10)
         
-        while g.tick < self.lifespan:
+        while g.tick < self.lifespan and not g.rocket.dead:
             move = (network.get_move(g.rocket, g.rocket.closest_obstacles(g.asteroids)))
             g.controller(move)
             g.update()

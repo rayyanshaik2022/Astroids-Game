@@ -92,12 +92,13 @@ class Game():
 
                     # Add score for rocket
                     difference = (Asteroid.SIZE_RANGE[1] - Asteroid.SIZE_RANGE[0]) // 3
-                    if asteroid.size < Asteroid.SIZE_RANGE[0] + difference:
-                        rocket.score += 100
-                    elif asteroid.size < Asteroid.SIZE_RANGE[0] + 2*difference:
-                        rocket.score += 50
-                    else:
-                        rocket.score += 20
+                    if not rocket.dead:
+                        if asteroid.size < Asteroid.SIZE_RANGE[0] + difference:
+                            rocket.score += 100
+                        elif asteroid.size < Asteroid.SIZE_RANGE[0] + 2*difference:
+                            rocket.score += 50
+                        else:
+                            rocket.score += 20
                         
 
                     # This should kill the asteroid
@@ -160,6 +161,8 @@ class Game():
         rocket.distance_covered += rocket.velocity.magnitude()
 
         rocket.shoot_countdown -= 1
+
+        rocket.time_alive += 1
 
     def update_bullets(self):
         rocket = self.rocket
@@ -238,7 +241,8 @@ class Rocket():
     ROTATION_RATE = 50
 
     SHOOTER_DELAY = 10
-    MAX_BULLETS = 8
+    # Should be ~8 for the actual game
+    MAX_BULLETS = 3
 
     def __init__(self, pos : tuple):
 
@@ -254,6 +258,7 @@ class Rocket():
         self.bullets = []
         self.shoot_countdown = Rocket.SHOOTER_DELAY
         self.distance_covered = 0
+        self.time_alive = 0
     
     def calculate_polygon(self):
 

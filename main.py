@@ -6,7 +6,7 @@ import random
 from effects import *
 from network import *
 
-p = Population(pop_size=10, generations=5, lifespan=40, mutation_chance=0.15, mutation_rate=0.2)
+p = Population(pop_size=50, generations=25, lifespan=200, mutation_chance=0.15, mutation_rate=0.2)
 p.train()
 agent = p.population[0]
 
@@ -24,7 +24,7 @@ class Gui:
         font = '.\Fonts\-Nasalization-Regular.ttf'
         self.font_medium = pygame.font.Font(font, 35)
 
-        self.game = Game(Rocket((400,400)), 0.2, 15)
+        self.game = Game(Rocket((400,400)), 0.2, 10)
         self.particles = ParticleManager(["#FFFACC","#FFEACC","#FFD7CC","#FFCDCC","#FFD5AD"])
 
     def run(self):
@@ -58,6 +58,9 @@ class Gui:
                     )
 
         self.particles.update()
+
+        if self.game.rocket.dead:
+            self.new()
 
     def draw(self):
         self.screen.fill(COLORS['background'])

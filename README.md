@@ -20,9 +20,11 @@
 
 ## Deep Genetic Algorithm
 
-## Genetic Algorithm Optimization Observations
+## Genetic Algorithm Optimization Observations (Logs)
 - ### Testing Round A
     - **Observations**: A 'lightly' trained rocket would even up turning in circles and shoot randomly. While this may have been a good solution within 20 seconds, it is not a good long term solution. To counteract this, I added bias in the fitness evaluation function to add score by how far the rocket travels. This incentivizes the rocket to apply thrust.
+- ### Testing Round B
+    - **Observations**: Adding a bias towards distance traveled in the evaluation function led me to reach the conclusion (and was also demonstrated) that rockets were being trained to reach and maintain a high velocity. This is not what I intended - I was aiming to direct the rockets to using the thrust action more often. However, I came to the conclusion that by using simple values for the evaluation function (points, time alive and *distance_covered/time_alive x 0.2%*), over a long training period the rocket may come to learn to move so that it does not stay in the same spot for long. To also combat the issue of the rocket staying at the spawn point (notably the center at (400,400)), I gave the rocket a random spawn within a  *100√2* radius of the center.
 
 ## Learning Resources
 - The concept and code for this project was developed 100% by myself.
