@@ -120,17 +120,20 @@ class Game():
             asteroid_poly = Polygon(asteroid.current_polygon())
         
             for i, line in enumerate(rocket_view_lines):
-                    intersection = line.intersection(asteroid_poly)
+                    try:
+                        intersection = line.intersection(asteroid_poly)
+                    except:
+                        # Exception occurs if the generated polygon is invalid (very rare)
+                        intersection = False
                     if intersection:
                         vision_intersections[i].append(intersection.coords[0])
         
+          
         # sort all intersections
         #vision_intersections = sorted(vision_intersections, key= lambda: )
-        rocket.vision_intersections = [
-            sorted(x, key=lambda z: ) for x in vision_intersections
-        ]
+        cx, cy = rocket.pos.x, rocket.pos.y
+        [v_line.sort(reverse=False, key=lambda x: math.hypot(cx-x[0], cy-x[1])) for v_line in vision_intersections]    
         rocket.vision_intersections = vision_intersections
-        
 
         # Returns drawing sequences such as particles
         return effects
@@ -189,6 +192,8 @@ class Game():
         rocket.shoot_countdown -= 1
 
         rocket.time_alive += 1
+        if rocket.acceleration != 0:
+            rocket.thrust_time += 1
 
     def update_bullets(self):
         rocket = self.rocket
@@ -268,10 +273,10 @@ class Rocket():
 
     SHOOTER_DELAY = 10
     # Should be ~8 for the actual game
-    MAX_BULLETS = 3
+    MAX_BULLETS = 0
 
     VISION_DISTANCE = 200
-    VISION_LINES = 8
+    VISION_LINES = 16
 
     def __init__(self, pos : tuple):
 
@@ -289,6 +294,7 @@ class Rocket():
         self.bullets = []
         self.shoot_countdown = Rocket.SHOOTER_DELAY
         self.distance_covered = 0
+        self.thrust_time = 0
         self.time_alive = 0
     
     def calculate_polygon(self):
@@ -344,8 +350,8 @@ class Rocket():
         # Draw intersection lines
         i_lines = self.vision_intersections
         for line in i_lines:
-            for closest_intersection in  line:
-                x, y = closest_intersection
+            if len(line) > 0:
+                x, y = line[0]
                 pygame.gfxdraw.line(screen, int(self.pos.x), int(self.pos.y), int(x), int(y), Color("#FF0000"))
 
 

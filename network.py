@@ -2,20 +2,28 @@ import numpy as np
 from game import *
 from settings import *
 
+def sigmoid(x):
+  return 1 / (1 + math.exp(-x))
+
 class Genetic:
 
     ACTIONS = [
         Game.TURN_RIGHT,
         Game.TURN_LEFT,
         Game.THRUST,
-        Game.SHOOT,
+        #Game.SHOOT,
         Game.IDLE
     ]
 
     def __init__(self):
 
         # creates a random network
-        self.network = self.generate_rnetwork(27, 20, 5)
+        
+        #get_move
+        #self.network = self.generate_rnetwork(27, 20, 5)
+
+        #get_move2
+        self.network = self.generate_rnetwork(7 + Rocket.VISION_LINES, 15, len(Genetic.ACTIONS))
     
     def generate_rnetwork(self, input_size, hidden_size, output_size):
 
@@ -32,7 +40,7 @@ class Genetic:
 
     def get_move(self, rocket, asteroids):
         
-        input_vector = self.get_state(rocket, asteroids)
+        input_vector = self.get_state2(rocket) #self.get_state(rocket, asteroids)
         hidden_layer1, hidden_layer2, hidden_layer3, output_layer = self.network
 
         # Forwards propagation
@@ -119,6 +127,47 @@ class Genetic:
 
         return np.array(input_vector)
 
+    def get_state2(self, rocket):
+        """
+        This method gathers all input values and normalizes them
+        """
+
+        """
+        Inputs:
+        1. Rocket x Position
+        2. Rocket y Position
+        3. Rocket Acceleration
+        4. Rocket Speed
+        5. Rocket Velocity (direction)
+        6. Rocket shooter countdown
+        7. Rocket Direction
+
+        - Inputs from (n)) tracing lines
+
+        8n. length of line
+        """
+
+        input_vector = [-1 for i in range(7+Rocket.VISION_LINES)]
+        input_vector[0] = rocket.pos.x/WIDTH
+        input_vector[1] = rocket.pos.y/HEIGHT
+        input_vector[2] = rocket.acceleration/Rocket.ACCELERATION
+        input_vector[3] = rocket.velocity.magnitude() / Rocket.MAX_SPEED
+        input_vector[4] = math.atan2(rocket.velocity.x, rocket.velocity.y) / (2*math.pi)
+        input_vector[5] = rocket.shoot_countdown / Rocket.SHOOTER_DELAY
+        input_vector[6] = (rocket.direction%(2*math.pi)) / math.pi
+
+        c = 7
+        for line in rocket.vision_intersections:
+            if line == []:
+                input_vector[c] = 1 # max viewdistance
+            else:
+                length = math.hypot(rocket.pos.x-line[0][0], rocket.pos.y-line[0][1])
+                input_vector[c] = length / Rocket.VISION_DISTANCE
+            c += 1
+
+        input_vector = list(np.array(input_vector)) + [1]
+        return np.array(input_vector)
+
 class Population:
 
     def __init__(self, pop_size, generations, lifespan, mutation_chance=0.1, mutation_rate=0.1, network_type=Genetic):
@@ -148,8 +197,9 @@ class Population:
         score = rocket.score
         time_alive = rocket.time_alive
         distance = rocket.distance_covered/(time_alive*0.002)
+        time_accelerating = rocket.thrust_time
         
-        return rocket.score + time_alive + distance
+        return rocket.score + time_alive + time_accelerating
     
     def crossover(self, pool, total_children):
         children = []
